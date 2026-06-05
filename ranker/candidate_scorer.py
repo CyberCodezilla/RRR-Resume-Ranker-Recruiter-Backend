@@ -83,26 +83,31 @@ def score_education(candidate: Dict[str, Any], jd: Dict[str, Any]) -> float:
         return 0.0
 
     best = 0.0
+    DEGREE_WEIGHT = {"phd": 1.0, "master": 0.9, "bachelor": 0.75, "diploma": 0.5}
     for item in education:
         tier = EDUCATION_TIER_WEIGHT.get(str(item.get("tier") or "unknown").lower(), 0.2)
         field_match = 1.0 if text_match(item.get("field_of_study"), target_field) > 0 else 0.4
-        best = max(best, tier * field_match)
+        degree = str(item.get("degree") or "").lower()
+        degree_mult = next((v for k, v in DEGREE_WEIGHT.items() if k in degree), 0.6)
+        best = max(best, tier * field_match * degree_mult)
 
     return clamp(best)
 
 
-def build_reasoning(candidate: Dict[str, Any], breakdown: Dict[str, float]) -> str:
+def build_reasoning(candidate: Dict[str, Any], breakdown: Dict[str, float], jd: Dict[str, Any]) -> str:
     profile = candidate.get("profile") or {}
     signals = candidate.get("redrob_signals") or {}
     title = profile.get("current_title") or profile.get("headline") or "Candidate"
     years = safe_float(profile.get("years_of_experience"))
     skills = candidate.get("skills") or []
+    jd_required = set(s.lower() for s in jd.get("required_skills", []))
+    matched_skills = sum(1 for s in skills if s.get("name","").lower() in jd_required)
     response_rate = safe_float(signals.get("recruiter_response_rate"))
     top_component = max(breakdown, key=breakdown.get).replace("_", " ")
 
     return (
         f"{title} with {years:.1f} yrs; "
-        f"{len(skills)} skills; "
+        f"{matched_skills} AI core skills matched; "
         f"top signal {top_component}; "
         f"response rate {response_rate:.2f}."
     )
@@ -138,7 +143,7 @@ def score_candidate(
             "activity": rounded_breakdown["signal_modifier"],
             **rounded_breakdown,
         },
-        "reasoning": build_reasoning(candidate, rounded_breakdown),
+        "reasoning": build_reasoning(candidate, rounded_breakdown, jd),
     }
 
 

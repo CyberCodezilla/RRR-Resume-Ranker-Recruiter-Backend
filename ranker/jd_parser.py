@@ -180,16 +180,18 @@ def parse_jd_text(text: str) -> Dict[str, object]:
     else:
         preferred = _dedupe(preferred + [skill for skill in known_hits if skill.lower() not in {item.lower() for item in required}])
 
-    skills_text = " ".join(_dedupe(required + preferred))
+    target_title = _extract_title(text)
+    target_industry = _extract_industry(text)
+    skills_text = " ".join(_dedupe(required + preferred)) + f" {target_title} {target_industry}"
 
     return {
         "required_skills": required,
         "preferred_skills": preferred,
-        "target_title": _extract_title(text),
+        "target_title": target_title,
         "min_experience_years": _extract_experience(text),
-        "target_industry": _extract_industry(text),
+        "target_industry": target_industry,
         "target_field": _extract_field(text),
-        "skills_text": skills_text or text,
+        "skills_text": skills_text.strip() or text,
     }
 
 
