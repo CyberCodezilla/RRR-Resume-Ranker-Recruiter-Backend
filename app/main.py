@@ -1,13 +1,47 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List, Any
+import os
+from typing import Any, Dict, List
 
-app = FastAPI(title="RRR Resume Ranker Backend (stub)")
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from ranker import parse_jd_text, rank_candidates
+from ranker.candidate_scorer import WEIGHTS
+
+
+app = FastAPI(title="RRR Resume Ranker Backend")
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "RRR_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,https://*.vercel.app",
+    ).split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 class RankRequest(BaseModel):
     job_description: str
-    candidates: List[Any]
+    candidates: List[Dict[str, Any]]
+
+
+@app.get("/")
+async def root():
+    return {
+        "status": "ok",
+        "service": "RRR Resume Ranker",
+        "message": "Use GET /health, POST /rank, or open /docs for the API explorer.",
+    }
 
 
 @app.get("/health")
@@ -17,20 +51,21 @@ async def health():
 
 @app.post("/rank")
 async def rank(req: RankRequest):
-    # Minimal stub implementation: return up to 100 candidates with a deterministic placeholder score
+    if not req.job_description.strip():
+        raise HTTPException(status_code=400, detail="job_description is required")
     if not req.candidates:
         raise HTTPException(status_code=400, detail="candidates array is required")
 
-    results = []
-    for i, c in enumerate(req.candidates[:100]):
-        cid = c.get("candidate_id") or c.get("id") or f"CAND_{i:07d}"
-        # Simple deterministic score based on years_of_experience if available
-        yrs = 0
-        try:
-            yrs = float(c.get("profile", {}).get("years_of_experience", 0) or 0)
-        except Exception:
-            yrs = 0
-        score = min(1.0, yrs / 15.0)
-        results.append({"candidate_id": cid, "rank": i + 1, "score": round(score, 4), "reasoning": "stub score based on experience"})
+    jd = parse_jd_text(req.job_description)
+    ranked = rank_candidates(req.candidates, jd, limit=100)
 
-    return {"results": results}
+    return {
+        "ranked_candidates": ranked,
+        "results": ranked,
+        "total_candidates": len(req.candidates),
+        "ranked_count": len(ranked),
+        "scoring_model": {
+            "name": "semantic_weighted_v1",
+            "weights": WEIGHTS,
+        },
+    }

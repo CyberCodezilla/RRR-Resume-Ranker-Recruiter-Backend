@@ -1,0 +1,7 @@
+team_name: "RRR-Team"
+github_repo: "https://github.com/your-username/RRR-Resume-Ranker-Recruiter-Backend"
+sandbox_link: "https://huggingface.co/spaces/YOUR_USERNAME/redrob-ranker"
+reproduce_command: "python rank.py --candidates ./data/sample_candidates.json --out ./submission.csv"
+compute:
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
