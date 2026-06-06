@@ -168,12 +168,12 @@ def _extract_field(text: str) -> str:
 def parse_jd_text(text: str) -> Dict[str, object]:
     """Parse JD text into the stable dict expected by the scorer."""
     text = text or ""
-    required = _split_skill_lines(_extract_section_lines(text, ["required", "must have", "key qualification"]))
-    preferred = _split_skill_lines(_extract_section_lines(text, ["preferred", "nice to have", "good to have"]))
+    raw_required = _split_skill_lines(_extract_section_lines(text, ["required", "must have", "key qualification"]))
+    raw_preferred = _split_skill_lines(_extract_section_lines(text, ["preferred", "nice to have", "good to have"]))
 
     known_hits = _known_skill_hits(text)
-    required = _dedupe([skill for skill in required if skill.lower() in {hit.lower() for hit in known_hits}])
-    preferred = _dedupe([skill for skill in preferred if skill.lower() in {hit.lower() for hit in known_hits}])
+    required = _dedupe([skill for skill in raw_required if skill.lower() in {hit.lower() for hit in known_hits}])
+    preferred = _dedupe([skill for skill in raw_preferred if skill.lower() in {hit.lower() for hit in known_hits}])
 
     if not required:
         required = known_hits[:8]
@@ -186,6 +186,7 @@ def parse_jd_text(text: str) -> Dict[str, object]:
 
     return {
         "required_skills": required,
+        "raw_required_skills": raw_required,
         "preferred_skills": preferred,
         "target_title": target_title,
         "min_experience_years": _extract_experience(text),
