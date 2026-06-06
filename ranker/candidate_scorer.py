@@ -100,7 +100,7 @@ def build_reasoning(candidate: Dict[str, Any], breakdown: Dict[str, float], jd: 
     title = profile.get("current_title") or profile.get("headline") or "Candidate"
     years = safe_float(profile.get("years_of_experience"))
     skills = candidate.get("skills") or []
-    jd_required = set(s.lower() for s in jd.get("required_skills", []))
+    jd_required = set(s.lower() for s in jd.get("raw_required_skills", jd.get("required_skills", [])))
     matched_skills = sum(1 for s in skills if s.get("name","").lower() in jd_required)
     response_rate = safe_float(signals.get("recruiter_response_rate"))
     top_component = max(breakdown, key=breakdown.get).replace("_", " ")

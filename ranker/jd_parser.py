@@ -5,6 +5,7 @@ from typing import Dict, List
 
 DEFAULT_JD = {
     "required_skills": [],
+    "raw_required_skills": [],
     "preferred_skills": [],
     "target_title": "Any",
     "min_experience_years": 0,
@@ -171,6 +172,8 @@ def parse_jd_text(text: str) -> Dict[str, object]:
     required = _split_skill_lines(_extract_section_lines(text, ["required", "must have", "key qualification"]))
     preferred = _split_skill_lines(_extract_section_lines(text, ["preferred", "nice to have", "good to have"]))
 
+    raw_required = list(required)
+
     known_hits = _known_skill_hits(text)
     required = _dedupe([skill for skill in required if skill.lower() in {hit.lower() for hit in known_hits}])
     preferred = _dedupe([skill for skill in preferred if skill.lower() in {hit.lower() for hit in known_hits}])
@@ -180,12 +183,16 @@ def parse_jd_text(text: str) -> Dict[str, object]:
     else:
         preferred = _dedupe(preferred + [skill for skill in known_hits if skill.lower() not in {item.lower() for item in required}])
 
+    if not raw_required:
+        raw_required = list(required)
+
     target_title = _extract_title(text)
     target_industry = _extract_industry(text)
     skills_text = " ".join(_dedupe(required + preferred)) + f" {target_title} {target_industry}"
 
     return {
         "required_skills": required,
+        "raw_required_skills": raw_required,
         "preferred_skills": preferred,
         "target_title": target_title,
         "min_experience_years": _extract_experience(text),
