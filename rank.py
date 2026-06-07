@@ -53,6 +53,8 @@ def main():
     candidates = load_candidates(Path(args.candidates))
     jd = parse_jd_docx(args.jd)
     ranked = rank_candidates(candidates, jd, cache_path=args.cache, limit=100)
+    if len(ranked) < 100:
+        print(f"WARNING: Only {len(ranked)} candidates ranked - submission requires top 100")
     write_submission(ranked, Path(args.out))
 
     elapsed = time.perf_counter() - started
