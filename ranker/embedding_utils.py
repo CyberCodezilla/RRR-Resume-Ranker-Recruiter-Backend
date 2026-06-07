@@ -16,20 +16,24 @@ def load_model(model_name: str = MODEL_NAME):
     return SentenceTransformer(model_name)
 
 
+PROF_WEIGHTS = {
+    "expert": 1.0,
+    "advanced": 0.85,
+    "intermediate": 0.65,
+    "beginner": 0.4,
+}
+
+
 def candidate_embedding_text(candidate: Dict) -> str:
-    skills = []
+    skill_tokens = []
     for skill in candidate.get("skills") or []:
-        skills.append(
-            " ".join(
-                str(part)
-                for part in (
-                    skill.get("name", ""),
-                    skill.get("proficiency", ""),
-                    skill.get("duration_months", ""),
-                )
-                if part is not None
-            )
-        )
+        name = str(skill.get("name") or "").strip()
+        if not name:
+            continue
+        proficiency = str(skill.get("proficiency") or "").lower().strip()
+        weight = PROF_WEIGHTS.get(proficiency, 0.5)
+        repeat = max(1, int(weight * 3))
+        skill_tokens.append(f"{name} " * repeat)
 
     profile = candidate.get("profile") or {}
     profile_text = " ".join(
@@ -37,7 +41,7 @@ def candidate_embedding_text(candidate: Dict) -> str:
         for field in ("headline", "summary", "current_title", "current_industry")
     )
 
-    return " ".join([profile_text, " ".join(skills)]).strip()
+    return " ".join([profile_text, " ".join(skill_tokens)]).strip()
 
 
 def cache_key(candidate: Dict) -> str:

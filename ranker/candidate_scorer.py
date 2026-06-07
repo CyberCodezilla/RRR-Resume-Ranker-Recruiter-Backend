@@ -52,8 +52,26 @@ def years_ago(value: Any) -> float:
     return months / 12.0
 
 
-def score_skill_match(candidate_id: str, jd_embedding: np.ndarray, candidate_embeddings: Dict[str, np.ndarray]) -> float:
-    return clamp((cosine_similarity(jd_embedding, candidate_embeddings.get(candidate_id)) + 1.0) / 2.0)
+def score_skill_match(
+    candidate_id: str,
+    jd_embedding: np.ndarray,
+    candidate_embeddings: Dict[str, np.ndarray],
+    candidate: Dict[str, Any] = None,
+) -> float:
+    base = clamp((cosine_similarity(jd_embedding, candidate_embeddings.get(candidate_id)) + 1.0) / 2.0)
+
+    # Endorsement multiplier: rewards peer-validated competence
+    skills = (candidate or {}).get("skills") or []
+    if skills:
+        boosts = [
+            min(1.0, 0.5 + (skill.get("endorsements", 0) / 20.0))
+            for skill in skills
+        ]
+        endorsement_boost = sum(boosts) / len(boosts)
+    else:
+        endorsement_boost = 0.5
+
+    return clamp(base * endorsement_boost * 2.0)
 
 
 def score_career_fit(candidate: Dict[str, Any], jd: Dict[str, Any]) -> float:
@@ -123,7 +141,7 @@ def score_candidate(
     signals = candidate.get("redrob_signals") or {}
 
     breakdown = {
-        "skill_match": score_skill_match(candidate_id, jd_embedding, candidate_embeddings),
+        "skill_match": score_skill_match(candidate_id, jd_embedding, candidate_embeddings, candidate),
         "career_fit": score_career_fit(candidate, jd),
         "signal_modifier": score_signal_modifier(signals),
         "education": score_education(candidate, jd),
