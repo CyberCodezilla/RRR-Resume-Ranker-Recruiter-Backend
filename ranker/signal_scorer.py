@@ -39,7 +39,10 @@ def score_signal_modifier(signals: Dict[str, Any]) -> float:
     offer = safe_float(signals.get("offer_acceptance_rate"), -1.0)
     offer_score = 0.5 if offer < 0 else clamp(offer)
 
-    return clamp(mean([github_score, response_rate, interview_completion, assessment_score, offer_score]))
+    completeness = safe_float(signals.get("profile_completeness_score"), 0.0)
+    completeness_score = clamp(completeness / 100.0)
+
+    return clamp(mean([github_score, response_rate, interview_completion, assessment_score, offer_score, completeness_score]))
 
 
 def score_availability(signals: Dict[str, Any]) -> float:
